@@ -1,0 +1,157 @@
+﻿/**
+ * Editor API Communicator (UAC) - C# Client Example
+ * ==================================================
+ * 
+ * This can be used in:
+ *   - .NET Console applications
+ *   - ASP.NET services
+ *   - External C# tools
+ * 
+ * Prerequisites:
+ *     dotnet add package System.Net.Http.Json
+ * 
+ * Usage:
+ *     1. Open Unity with the Editor API Communicator package installed
+ *     2. Run: dotnet run
+ */
+
+using System;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
+
+namespace UACClient
+{
+    public class EditorClient : IDisposable
+    {
+        private readonly HttpClient _client;
+        private readonly string _baseUrl;
+
+        public EditorClient(string baseUrl = "http://localhost:7777")
+        {
+            _baseUrl = baseUrl;
+            _client = new HttpClient { BaseAddress = new Uri(baseUrl) };
+        }
+
+        public async Task<T?> GetAsync<T>(string endpoint)
+        {
+            try
+            {
+                return await _client.GetFromJsonAsync<T>(endpoint);
+            }
+            catch (HttpRequestException)
+            {
+                Console.WriteLine("Error: Cannot connect to Unity. Is Unity running?");
+                return default;
+            }
+        }
+
+        public async Task<T?> PostAsync<T>(string endpoint, object? data = null)
+        {
+            try
+            {
+                var response = await _client.PostAsJsonAsync(endpoint, data ?? new { });
+                return await response.Content.ReadFromJsonAsync<T>();
+            }
+            catch (HttpRequestException)
+            {
+                Console.WriteLine("Error: Cannot connect to Unity. Is Unity running?");
+                return default;
+            }
+        }
+
+        // Discovery
+        public Task<ApiResponse?> Discover() => GetAsync<ApiResponse>("/api/discover");
+        public Task<ApiResponse?> Categories() => GetAsync<ApiResponse>("/api/categories");
+
+        // Core
+        public Task<ApiResponse?> Status() => GetAsync<ApiResponse>("/api/status");
+        
+        // GameObjects
+        public Task<ApiResponse?> CreateGameObject(string name, string primitiveType = "Cube", 
+            float x = 0, float y = 0, float z = 0)
+            => PostAsync<ApiResponse>("/api/gameobject/create", new { name, primitiveType, x, y, z });
+
+        public Task<ApiResponse?> Transform(string name, float? x = null, float? y = null, float? z = null,
+            float? scaleX = null, float? scaleY = null, float? scaleZ = null)
+            => PostAsync<ApiResponse>("/api/gameobject/transform", new { name, x, y, z, scaleX, scaleY, scaleZ });
+
+        // Materials
+        public Task<ApiResponse?> SetColor(string gameObjectName, float r, float g, float b, float a = 1)
+            => PostAsync<ApiResponse>("/api/material/color", new { gameObjectName, r, g, b, a });
+
+        // Lights
+        public Task<ApiResponse?> CreateLight(string name, string type = "Point", 
+            float x = 0, float y = 3, float z = 0)
+            => PostAsync<ApiResponse>("/api/light/create", new { name, type, x, y, z });
+
+        // Selection
+        public Task<ApiResponse?> Select(string name) 
+            => PostAsync<ApiResponse>("/api/selection/gameobject", new { name });
+        
+        public Task<ApiResponse?> FocusSelected() 
+            => PostAsync<ApiResponse>("/api/selection/focus");
+
+        public void Dispose() => _client.Dispose();
+    }
+
+    public record ApiResponse(bool Success, object? Data, string? Error);
+
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            using var unity = new EditorClient();
+
+            Console.WriteLine("Checking Unity connection...");
+            var status = await unity.Status();
+            if (status?.Success != true)
+            {
+                Console.WriteLine($"Error: {status?.Error}");
+                return;
+            }
+            Console.WriteLine("Connected to Unity!");
+
+            // Discover available endpoints
+            Console.WriteLine("\n--- Discovering API ---");
+            var discover = await unity.Discover();
+            Console.WriteLine($"Found endpoints in API");
+
+            Console.WriteLine("\n--- Creating Scene ---");
+
+            // Create ground
+            await unity.CreateGameObject("Ground", "Cube", 0, -0.5f, 0);
+            Console.WriteLine("Created Ground");
+            await unity.Transform("Ground", scaleX: 10, scaleY: 0.1f, scaleZ: 10);
+            await unity.SetColor("Ground", 0.3f, 0.3f, 0.3f);
+
+            // Create cylinders
+            var random = new Random();
+            for (int i = 0; i < 5; i++)
+            {
+                string name = $"Cylinder_{i}";
+                float x = i * 2 - 4;
+                float height = (float)random.NextDouble() * 2 + 0.5f;
+
+                await unity.CreateGameObject(name, "Cylinder", x, height / 2, 0);
+                Console.WriteLine($"Created {name}");
+                
+                await unity.Transform(name, scaleY: height / 2);
+                await unity.SetColor(name, 
+                    (float)random.NextDouble(), 
+                    (float)random.NextDouble(), 
+                    (float)random.NextDouble());
+            }
+
+            // Create light
+            await unity.CreateLight("MainLight", "Directional", 0, 10, 0);
+            Console.WriteLine("Created light");
+
+            // Focus
+            await unity.Select("Cylinder_2");
+            await unity.FocusSelected();
+
+            Console.WriteLine("\n--- Scene created! Check Unity. ---");
+        }
+    }
+}

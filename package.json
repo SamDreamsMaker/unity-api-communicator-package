@@ -1,0 +1,47 @@
+{
+    "name": "com.uac.editor-api",
+    "version": "1.2.2",
+    "displayName": "Editor API Communicator",
+    "description": "Comprehensive HTTP REST API for Unity Editor control and automation. 200+ endpoints for full editor access. Works with AI agents (Claude, ChatGPT, Copilot), Python scripts, CI/CD pipelines, web dashboards, external tools, and automated testing.",
+    "unity": "6000.0",
+    "unityRelease": "0f1",
+    "documentationUrl": "https://unity-api-communicator.com/docs.html",
+    "changelogUrl": "https://unity-api-communicator.com/changelog.html",
+    "licensesUrl": "https://unity-api-communicator.com/terms.html",
+    "keywords": [
+        "rest",
+        "api",
+        "http",
+        "automation",
+        "editor",
+        "control",
+        "remote",
+        "external",
+        "ai",
+        "testing",
+        "cicd",
+        "python",
+        "scripting",
+        "communicator"
+    ],
+    "author": {
+        "name": "Unity API Communicator",
+        "email": "support@unity-api-communicator.com",
+        "url": "https://unity-api-communicator.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/SamDreamsMaker/unity-api-communicator.git"
+    },
+    "category": "Editor Extensions",
+    "dependencies": {},
+    "hideInEditor": false
+}
+
+
+
+
+
+
+
+
